@@ -14,6 +14,7 @@ import RoutineIcon from './src/RoutineIcon';
 import EmberLaunch, { EmberWordmark } from './src/EmberBrand';
 
 const KEY = 'daily-rep-v1';
+const DRAFT_KEY = 'daily-rep-draft-v1';
 const Context = createContext(null);
 const Tabs = createBottomTabNavigator();
 const colors = { bg: '#000000', card: '#1c1c1e', blue: '#f07842', muted: '#929295', text: '#ffffff' };
@@ -32,19 +33,31 @@ function Sheet({ visible, title, onClose, children, showClose = true }) {
 }
 
 function Workout({ navigation }) {
-  const { data, commit, busy, setNotice } = useContext(Context);
-  const [draft, setDraft] = useState(null);
+  const { data, savedDraft, setSavedDraft, commit, busy, setNotice } = useContext(Context);
+  const [draft, setDraft] = useState(savedDraft);
   // Only checked sets require confirmation before leaving the workout.
   const hasCompletedSets = draft?.exercises.some(exercise => exercise.sets.some(set => set.done)) ?? false;
   const [picker, setPicker] = useState(false);
   const [discard, setDiscard] = useState(false);
   const [error, setError] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      try {
+        if (draft) await AsyncStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+        else await AsyncStorage.removeItem(DRAFT_KEY);
+      } catch {
+        if (draft) setNotice('Could not save your workout draft on this device.');
+      }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [draft, setNotice]);
   const updateExercise = (id, fn) => {
     setDraft(current => ({ ...current, exercises: current.exercises.map(e => e.id === id ? fn(e) : e) }));
   };
   function closeWorkout() {
     Keyboard.dismiss();
     setDraft(null);
+    setSavedDraft(null);
     setPicker(false);
     setDiscard(false);
     setError('');
@@ -176,6 +189,7 @@ function NoticeBanner() {
 
 export default function App() {
   const [data, setData] = useState({ name: '', sessions: [] });
+  const [savedDraft, setSavedDraft] = useState(null);
   const [ready, setReady] = useState(false);
   const [introDone, setIntroDone] = useState(false);
   // Give the brand reveal a brief moment; storage loads at the same time.
@@ -189,7 +203,17 @@ export default function App() {
   const saving = useRef(false);
   async function load() {
     setLoadError(false);
-    try { const raw = await AsyncStorage.getItem(KEY); if (raw) { const parsed = JSON.parse(raw); if (typeof parsed.name !== 'string' || !Array.isArray(parsed.sessions)) throw new Error('Invalid saved data'); setData(parsed); } setReady(true); }
+    try {
+      const [raw, rawDraft] = await Promise.all([AsyncStorage.getItem(KEY), AsyncStorage.getItem(DRAFT_KEY)]);
+      if (raw) { const parsed = JSON.parse(raw); if (typeof parsed.name !== 'string' || !Array.isArray(parsed.sessions)) throw new Error('Invalid saved data'); setData(parsed); }
+      if (rawDraft) {
+        const parsedDraft = JSON.parse(rawDraft);
+        const validDraft = typeof parsedDraft.id === 'string' && typeof parsedDraft.startedAt === 'string' && Array.isArray(parsedDraft.exercises) && parsedDraft.exercises.every(exercise => typeof exercise.id === 'string' && Array.isArray(exercise.sets));
+        if (validDraft) setSavedDraft(parsedDraft);
+        else await AsyncStorage.removeItem(DRAFT_KEY);
+      }
+      setReady(true);
+    }
     catch { setLoadError(true); }
   }
   useEffect(() => { load(); }, []);
@@ -200,7 +224,7 @@ export default function App() {
     catch { setNotice('Could not save on this device. Please try again.'); return false; }
     finally { saving.current = false; setBusy(false); }
   }
-  return <SafeAreaProvider><StatusBar style="light" /><Context.Provider value={{ data, commit, busy, notice, setNotice }}><View style={s.app}>
+  return <SafeAreaProvider><StatusBar style="light" /><Context.Provider value={{ data, savedDraft, setSavedDraft, commit, busy, notice, setNotice }}><View style={s.app}>
     {(!introDone || (!ready && !loadError)) ? <EmberLaunch /> : !ready ? <View style={s.empty}>{loadError ? <><Text style={s.body}>Could not load your saved workouts.</Text><Button title="Retry" onPress={load} /></> : <ActivityIndicator color={colors.blue} />}</View> : <>
       <AppNavigation />
       <NoticeBanner />

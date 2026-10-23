@@ -56,7 +56,7 @@ Routine templates are editable starting points. They do not define a weekly trai
 Completed sessions are stored as JSON using AsyncStorage under the key `daily-rep-v1`. Data loads when the app opens; a session appears in History after its storage write succeeds.
 
 - Saved sessions remain available after restarting the app.
-- Active workouts remain available when switching tabs, but are lost on closing or reloading the app.
+- An active workout draft is saved on this device and restored when the app opens again. Leaving with **Go back** and confirming discard removes the draft.
 - Data is local to the device or browser and does not sync across devices.
 - Clearing the app's storage or browser site data removes saved sessions.
 
