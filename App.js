@@ -34,13 +34,14 @@ function Sheet({ visible, title, onClose, children, showClose = true }) {
 
 function Workout({ navigation }) {
   const { data, savedDraft, setSavedDraft, commit, busy, setNotice } = useContext(Context);
-  const [draft, setDraft] = useState(savedDraft);
+  const [draft, setDraft] = useState(null);
   // Only checked sets require confirmation before leaving the workout.
   const hasCompletedSets = draft?.exercises.some(exercise => exercise.sets.some(set => set.done)) ?? false;
   const [picker, setPicker] = useState(false);
   const [discard, setDiscard] = useState(false);
   const [error, setError] = useState('');
   useEffect(() => {
+    if (!draft && savedDraft) return;
     const timer = setTimeout(async () => {
       try {
         if (draft) await AsyncStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
@@ -74,6 +75,13 @@ function Workout({ navigation }) {
     } catch (e) { setError(e.message); }
   }
   return <SafeAreaView edges={['top']} style={s.screen}>
+    <Sheet visible={!!savedDraft && !draft} showClose={false} title="Continue your saved workout?" onClose={() => {}}>
+      <View style={s.content}>
+        <Text style={s.muted}>Your unfinished workout was saved on this device. Resume where you left off, or discard this draft.</Text>
+        <Button title="Resume workout" onPress={() => setDraft(savedDraft)} />
+        <Button title="Discard draft" secondary onPress={() => setSavedDraft(null)} />
+      </View>
+    </Sheet>
     {draft && <View style={s.workoutToolbar}>
       <View style={[s.row, { justifyContent: 'space-between' }]}>
         <EmberWordmark />
@@ -130,15 +138,26 @@ function Workout({ navigation }) {
 }
 
 function History({ navigation }) {
-  const { data } = useContext(Context);
+  const { data, commit, busy, setNotice } = useContext(Context);
   const [selected, setSelected] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [query, setQuery] = useState('');
   const totals = summarize(data.sessions);
+  async function deleteSession() {
+    if (!deleteTarget) return;
+    const remaining = data.sessions.filter(session => session.id !== deleteTarget.id);
+    if (await commit({ ...data, sessions: remaining })) {
+      setSelected(null);
+      setDeleteTarget(null);
+      setNotice('Workout deleted.');
+    }
+  }
   return <SafeAreaView edges={['top']} style={s.screen}><FlatList contentContainerStyle={s.content} data={data.sessions.filter(x => `${x.name} ${x.exercises.map(e => e.name).join(' ')}`.toLowerCase().includes(query.toLowerCase()))} keyExtractor={x => x.id}
     ListHeaderComponent={<View style={s.stack}><Header title="History" /><Stats items={[[data.sessions.length, 'Sessions'], [totals.sets, 'Sets'], [totals.reps, 'Reps']]} /><Input accessibilityLabel="Search workout history" placeholder="Search workouts or exercises…" value={query} onChangeText={setQuery} /></View>}
     ListEmptyComponent={<><Empty icon="time-outline" title={query ? 'No matching sessions' : 'No workouts yet'} text={query ? 'Try a different workout or exercise name.' : 'Your saved sessions will appear here.'} />{!query && <Button title="Start a workout" onPress={() => navigation.navigate('Workout')} />}</>}
     renderItem={({ item }) => { const total = summarize([item]); return <Pressable accessibilityRole="button" accessibilityLabel={`View ${item.name}`} style={s.card} onPress={() => setSelected(item)}><Text style={s.eyebrow}>{new Date(item.finishedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</Text><View style={s.row}><Text style={[s.heading, s.flex]}>{item.name}</Text><Icon name="chevron-forward" color={colors.blue} /></View><Text style={s.muted}>{item.exercises.length} exercises · {total.sets} sets · {total.reps} reps</Text><Text style={s.muted}>{item.durationMinutes} min · {item.exercises.map(e => e.name).join(', ')}</Text></Pressable>; }} />
-    <Sheet visible={!!selected} title="Session details" onClose={() => setSelected(null)}>{selected && <ScrollView contentContainerStyle={s.content}><Header eyebrow={new Date(selected.finishedAt).toLocaleString()} title={selected.name} subtitle={`${selected.durationMinutes} minute session`} />{selected.exercises.map(e => <View key={e.id} style={s.card}><Text style={s.heading}>{e.name}</Text>{e.sets.map((set, i) => <Text key={set.id} style={s.body}>Set {i + 1}    {set.reps} reps    ·    {set.weight ? `${set.weight} kg` : 'Bodyweight'}</Text>)}</View>)}</ScrollView>}</Sheet>
+    <Sheet visible={!!selected && !deleteTarget} title="Session details" onClose={() => setSelected(null)}>{selected && <ScrollView contentContainerStyle={s.content}><Header eyebrow={new Date(selected.finishedAt).toLocaleString()} title={selected.name} subtitle={`${selected.durationMinutes} minute session`} />{selected.exercises.map(e => <View key={e.id} style={s.card}><Text style={s.heading}>{e.name}</Text>{e.sets.map((set, i) => <Text key={set.id} style={s.body}>Set {i + 1}    {set.reps} reps    ·    {set.weight ? `${set.weight} kg` : 'Bodyweight'}</Text>)}</View>)}<Button title="Delete workout" secondary disabled={busy} onPress={() => setDeleteTarget(selected)} /></ScrollView>}</Sheet>
+    <Sheet visible={!!deleteTarget} showClose={false} title="Delete this workout?" onClose={() => setDeleteTarget(null)}><View style={s.content}><Text style={s.muted}>This removes “{deleteTarget?.name}” from History and updates your profile totals.</Text><Button title="Keep workout" disabled={busy} onPress={() => setDeleteTarget(null)} /><Button title={busy ? 'Deleting…' : 'Delete workout'} secondary disabled={busy} onPress={deleteSession} /></View></Sheet>
   </SafeAreaView>;
 }
 function Profile() {
