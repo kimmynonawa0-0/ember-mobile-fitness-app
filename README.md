@@ -10,7 +10,7 @@ A workout tracking app for logging exercises, sets, reps, and weights. Built wit
 - Browse 48 exercises with muscle illustrations, equipment labels, search, and filters.
 - Add or remove exercises, adjust sets and reps, and record optional weights in kilograms.
 - Mark completed sets and save a session to History.
-- Review session details and search by workout or exercise name.
+- Review session details, rename workouts, and search by workout or exercise name.
 - View total workouts, completed sets, and reps in Profile.
 
 The interface uses a dark theme with EMBER branding and three bottom tabs: Workout, History, and Profile.
@@ -64,7 +64,7 @@ The stored document retains a legacy name field for compatibility. Profile displ
 
 ## Current limitations
 
-- Saved sessions cannot be edited. Deleting a session from History is supported.
+- Saved exercise sets cannot be edited. Workout names can be changed, and sessions can be deleted from History.
 - Exercises use reps and optional kilograms. Timed holds and distance-based activities are not supported.
 - Session duration in History measures elapsed time from starting to saving, including breaks. It is rounded to minutes with a minimum of one minute; there is no live workout timer.
 - Muscle illustrations identify representative targets, not exercise technique or every muscle involved.

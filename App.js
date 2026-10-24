@@ -141,8 +141,20 @@ function History({ navigation }) {
   const { data, commit, busy, setNotice } = useContext(Context);
   const [selected, setSelected] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [renameTarget, setRenameTarget] = useState(null);
+  const [sessionName, setSessionName] = useState('');
   const [query, setQuery] = useState('');
   const totals = summarize(data.sessions);
+  async function saveSessionName() {
+    const name = sessionName.trim();
+    if (!renameTarget || !name) return;
+    const sessions = data.sessions.map(session => session.id === renameTarget.id ? { ...session, name } : session);
+    if (await commit({ ...data, sessions })) {
+      setSelected({ ...renameTarget, name });
+      setRenameTarget(null);
+      setNotice('Workout name updated.');
+    }
+  }
   async function deleteSession() {
     if (!deleteTarget) return;
     const remaining = data.sessions.filter(session => session.id !== deleteTarget.id);
@@ -156,7 +168,8 @@ function History({ navigation }) {
     ListHeaderComponent={<View style={s.stack}><Header title="History" /><Stats items={[[data.sessions.length, 'Sessions'], [totals.sets, 'Sets'], [totals.reps, 'Reps']]} /><Input accessibilityLabel="Search workout history" placeholder="Search workouts or exercises…" value={query} onChangeText={setQuery} /></View>}
     ListEmptyComponent={<><Empty icon="time-outline" title={query ? 'No matching sessions' : 'No workouts yet'} text={query ? 'Try a different workout or exercise name.' : 'Your saved sessions will appear here.'} />{!query && <Button title="Start a workout" onPress={() => navigation.navigate('Workout')} />}</>}
     renderItem={({ item }) => { const total = summarize([item]); return <Pressable accessibilityRole="button" accessibilityLabel={`View ${item.name}`} style={s.card} onPress={() => setSelected(item)}><Text style={s.eyebrow}>{new Date(item.finishedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</Text><View style={s.row}><Text style={[s.heading, s.flex]}>{item.name}</Text><Icon name="chevron-forward" color={colors.blue} /></View><Text style={s.muted}>{item.exercises.length} exercises · {total.sets} sets · {total.reps} reps</Text><Text style={s.muted}>{item.durationMinutes} min · {item.exercises.map(e => e.name).join(', ')}</Text></Pressable>; }} />
-    <Sheet visible={!!selected && !deleteTarget} title="Session details" onClose={() => setSelected(null)}>{selected && <ScrollView contentContainerStyle={s.content}><Header eyebrow={new Date(selected.finishedAt).toLocaleString()} title={selected.name} subtitle={`${selected.durationMinutes} minute session`} />{selected.exercises.map(e => <View key={e.id} style={s.card}><Text style={s.heading}>{e.name}</Text>{e.sets.map((set, i) => <Text key={set.id} style={s.body}>Set {i + 1}    {set.reps} reps    ·    {set.weight ? `${set.weight} kg` : 'Bodyweight'}</Text>)}</View>)}<Button title="Delete workout" secondary disabled={busy} onPress={() => setDeleteTarget(selected)} /></ScrollView>}</Sheet>
+    <Sheet visible={!!selected && !deleteTarget && !renameTarget} title="Session details" onClose={() => setSelected(null)}>{selected && <ScrollView contentContainerStyle={s.content}><Header eyebrow={new Date(selected.finishedAt).toLocaleString()} title={selected.name} subtitle={`${selected.durationMinutes} minute session`} />{selected.exercises.map(e => <View key={e.id} style={s.card}><Text style={s.heading}>{e.name}</Text>{e.sets.map((set, i) => <Text key={set.id} style={s.body}>Set {i + 1}    {set.reps} reps    ·    {set.weight ? `${set.weight} kg` : 'Bodyweight'}</Text>)}</View>)}<Button title="Edit workout name" secondary disabled={busy} onPress={() => { setSessionName(selected.name); setRenameTarget(selected); }} /><Button title="Delete workout" secondary disabled={busy} onPress={() => setDeleteTarget(selected)} /></ScrollView>}</Sheet>
+    <Sheet visible={!!renameTarget} title="Edit workout name" onClose={() => setRenameTarget(null)}><View style={s.content}><Input accessibilityLabel="Workout name" placeholder="Workout name" value={sessionName} maxLength={60} onChangeText={setSessionName} /><Button title="Save name" disabled={busy || !sessionName.trim()} onPress={saveSessionName} /><Button title="Cancel" secondary disabled={busy} onPress={() => setRenameTarget(null)} /></View></Sheet>
     <Sheet visible={!!deleteTarget} showClose={false} title="Delete this workout?" onClose={() => setDeleteTarget(null)}><View style={s.content}><Text style={s.muted}>This removes “{deleteTarget?.name}” from History and updates your profile totals.</Text><Button title="Keep workout" disabled={busy} onPress={() => setDeleteTarget(null)} /><Button title={busy ? 'Deleting…' : 'Delete workout'} secondary disabled={busy} onPress={deleteSession} /></View></Sheet>
   </SafeAreaView>;
 }
