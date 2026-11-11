@@ -11,6 +11,7 @@ A workout tracking app for logging exercises, sets, reps, and weights. Built wit
 - Add or remove exercises, adjust sets and reps, and record optional weights in kilograms.
 - Mark completed sets and save a session to History.
 - Review session details, rename workouts, and search by workout or exercise name.
+- Repeat a saved workout as a fresh draft with the same exercises and sets.
 - View total workouts, completed sets, and reps in Profile.
 
 The interface uses a dark theme with EMBER branding and three bottom tabs: Workout, History, and Profile.
@@ -50,6 +51,12 @@ Only checked sets are saved. Exercises without completed sets are omitted, and a
 The **Go back** button stays visible while scrolling. If no sets are checked, it closes the workout immediately, including any unchecked edits. If any sets are checked, it asks for confirmation before discarding the session.
 
 Routine templates are editable starting points. They do not define a weekly training schedule.
+
+## Repeating a workout
+
+Open a session from History and select **Repeat workout** to start a new draft with the same exercises and number of sets. Reps and weights are prefilled for editing, while completion checkmarks are cleared so the new session starts fresh.
+
+If another workout is already in progress, EMBER asks before replacing it. The repeated workout is saved only after you check off sets and select **Finish & save workout**.
 
 ## Local storage
 
