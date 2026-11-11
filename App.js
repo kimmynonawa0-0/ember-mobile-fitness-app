@@ -39,6 +39,7 @@ function Workout({ navigation, route }) {
   const hasCompletedSets = draft?.exercises.some(exercise => exercise.sets.some(set => set.done)) ?? false;
   const [picker, setPicker] = useState(false);
   const [discard, setDiscard] = useState(false);
+  const [repeatTarget, setRepeatTarget] = useState(null);
   const [error, setError] = useState('');
   const repeatRequest = route.params?.repeat;
   const handledRepeat = useRef(null);
@@ -49,11 +50,13 @@ function Workout({ navigation, route }) {
     const session = data.sessions.find(item => item.id === repeatRequest.sessionId);
     if (!session) { setNotice('That workout is no longer available.'); return; }
     try {
+      const repeated = repeatWorkout(session);
+      if (draft) { setRepeatTarget(repeated); return; }
       setSavedDraft(null);
-      setDraft(repeatWorkout(session));
+      setDraft(repeated);
       setNotice(`Repeating “${session.name}”.`);
     } catch (e) { setNotice(e.message); }
-  }, [repeatRequest, data.sessions, navigation, setNotice, setSavedDraft]);
+  }, [repeatRequest, data.sessions, navigation, setNotice, setSavedDraft, draft]);
   useEffect(() => {
     if (!draft && savedDraft) return;
     const timer = setTimeout(async () => {
@@ -75,9 +78,18 @@ function Workout({ navigation, route }) {
     setSavedDraft(null);
     setPicker(false);
     setDiscard(false);
+    setRepeatTarget(null);
     setError('');
   }
   const start = (routine = [], name = '') => { setError(''); setNotice(''); setDraft({ id: String(Date.now()), startedAt: new Date().toISOString(), name, exercises: routine.map(newExercise) }); };
+  function applyRepeat() {
+    if (!repeatTarget) return;
+    setSavedDraft(null);
+    setDraft(repeatTarget);
+    setNotice(`Repeating “${repeatTarget.name}”.`);
+    setRepeatTarget(null);
+    setError('');
+  }
   async function save() {
     try {
       const session = finishSession(draft);
@@ -148,6 +160,7 @@ function Workout({ navigation, route }) {
       }} />}
     </Sheet>
     <Sheet visible={discard} showClose={false} title="Discard this workout?" onClose={() => setDiscard(false)}><View style={s.content}><Text style={s.muted}>Your checked sets have not been saved. Discard this session?</Text><Button title="Keep working out" onPress={() => setDiscard(false)} /><Button title="Discard session" secondary onPress={closeWorkout} /></View></Sheet>
+    <Sheet visible={!!repeatTarget} showClose={false} title="Replace current workout?" onClose={() => setRepeatTarget(null)}><View style={s.content}><Text style={s.muted}>Repeating “{repeatTarget?.name}” will replace the workout in progress. Its checked sets have not been saved.</Text><Button title="Start repeated workout" onPress={applyRepeat} /><Button title="Keep current workout" secondary onPress={() => setRepeatTarget(null)} /></View></Sheet>
   </SafeAreaView>;
 }
 
