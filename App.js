@@ -6,7 +6,7 @@ import { NavigationContainer, DarkTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { newExercise, summarize, finishSession } from './src/workouts';
+import { newExercise, summarize, finishSession, repeatWorkout } from './src/workouts';
 
 import ExercisePicker from './src/ExercisePicker';
 import { routines } from './src/routines';
@@ -32,7 +32,7 @@ function Sheet({ visible, title, onClose, children, showClose = true }) {
   return <Modal visible={visible} animationType="slide" onRequestClose={onClose}><SafeAreaView style={s.screen}><KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}><View style={[s.row, s.sheetHeader]}><Text style={[s.heading, s.flex]}>{title}</Text>{showClose && <Button title="Close" secondary onPress={onClose} />}</View>{children}</KeyboardAvoidingView></SafeAreaView></Modal>;
 }
 
-function Workout({ navigation }) {
+function Workout({ navigation, route }) {
   const { data, savedDraft, setSavedDraft, commit, busy, setNotice } = useContext(Context);
   const [draft, setDraft] = useState(null);
   // Only checked sets require confirmation before leaving the workout.
@@ -40,6 +40,20 @@ function Workout({ navigation }) {
   const [picker, setPicker] = useState(false);
   const [discard, setDiscard] = useState(false);
   const [error, setError] = useState('');
+  const repeatRequest = route.params?.repeat;
+  const handledRepeat = useRef(null);
+  useEffect(() => {
+    if (!repeatRequest?.sessionId || handledRepeat.current === repeatRequest.at) return;
+    handledRepeat.current = repeatRequest.at;
+    navigation.setParams({ repeat: undefined });
+    const session = data.sessions.find(item => item.id === repeatRequest.sessionId);
+    if (!session) { setNotice('That workout is no longer available.'); return; }
+    try {
+      setSavedDraft(null);
+      setDraft(repeatWorkout(session));
+      setNotice(`Repeating “${session.name}”.`);
+    } catch (e) { setNotice(e.message); }
+  }, [repeatRequest, data.sessions, navigation, setNotice, setSavedDraft]);
   useEffect(() => {
     if (!draft && savedDraft) return;
     const timer = setTimeout(async () => {
@@ -168,7 +182,7 @@ function History({ navigation }) {
     ListHeaderComponent={<View style={s.stack}><Header title="History" /><Stats items={[[data.sessions.length, 'Sessions'], [totals.sets, 'Sets'], [totals.reps, 'Reps']]} /><Input accessibilityLabel="Search workout history" placeholder="Search workouts or exercises…" value={query} onChangeText={setQuery} /></View>}
     ListEmptyComponent={<><Empty icon="time-outline" title={query ? 'No matching sessions' : 'No workouts yet'} text={query ? 'Try a different workout or exercise name.' : 'Your saved sessions will appear here.'} />{!query && <Button title="Start a workout" onPress={() => navigation.navigate('Workout')} />}</>}
     renderItem={({ item }) => { const total = summarize([item]); return <Pressable accessibilityRole="button" accessibilityLabel={`View ${item.name}`} style={s.card} onPress={() => setSelected(item)}><Text style={s.eyebrow}>{new Date(item.finishedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</Text><View style={s.row}><Text style={[s.heading, s.flex]}>{item.name}</Text><Icon name="chevron-forward" color={colors.blue} /></View><Text style={s.muted}>{item.exercises.length} exercises · {total.sets} sets · {total.reps} reps</Text><Text style={s.muted}>{item.durationMinutes} min · {item.exercises.map(e => e.name).join(', ')}</Text></Pressable>; }} />
-    <Sheet visible={!!selected && !deleteTarget && !renameTarget} title="Session details" onClose={() => setSelected(null)}>{selected && <ScrollView contentContainerStyle={s.content}><Header eyebrow={new Date(selected.finishedAt).toLocaleString()} title={selected.name} subtitle={`${selected.durationMinutes} minute session`} />{selected.exercises.map(e => <View key={e.id} style={s.card}><Text style={s.heading}>{e.name}</Text>{e.sets.map((set, i) => <Text key={set.id} style={s.body}>Set {i + 1}    {set.reps} reps    ·    {set.weight ? `${set.weight} kg` : 'Bodyweight'}</Text>)}</View>)}<Button title="Edit workout name" secondary disabled={busy} onPress={() => { setSessionName(selected.name); setRenameTarget(selected); }} /><Button title="Delete workout" secondary disabled={busy} onPress={() => setDeleteTarget(selected)} /></ScrollView>}</Sheet>
+    <Sheet visible={!!selected && !deleteTarget && !renameTarget} title="Session details" onClose={() => setSelected(null)}>{selected && <ScrollView contentContainerStyle={s.content}><Header eyebrow={new Date(selected.finishedAt).toLocaleString()} title={selected.name} subtitle={`${selected.durationMinutes} minute session`} />{selected.exercises.map(e => <View key={e.id} style={s.card}><Text style={s.heading}>{e.name}</Text>{e.sets.map((set, i) => <Text key={set.id} style={s.body}>Set {i + 1}    {set.reps} reps    ·    {set.weight ? `${set.weight} kg` : 'Bodyweight'}</Text>)}</View>)}<Button title="Repeat workout" icon="repeat" disabled={busy} onPress={() => { setSelected(null); navigation.navigate('Workout', { repeat: { sessionId: selected.id, at: Date.now() } }); }} /><Button title="Edit workout name" secondary disabled={busy} onPress={() => { setSessionName(selected.name); setRenameTarget(selected); }} /><Button title="Delete workout" secondary disabled={busy} onPress={() => setDeleteTarget(selected)} /></ScrollView>}</Sheet>
     <Sheet visible={!!renameTarget} title="Edit workout name" onClose={() => setRenameTarget(null)}><View style={s.content}><Input accessibilityLabel="Workout name" placeholder="Workout name" value={sessionName} maxLength={60} onChangeText={setSessionName} /><Button title="Save name" disabled={busy || !sessionName.trim()} onPress={saveSessionName} /><Button title="Cancel" secondary disabled={busy} onPress={() => setRenameTarget(null)} /></View></Sheet>
     <Sheet visible={!!deleteTarget} showClose={false} title="Delete this workout?" onClose={() => setDeleteTarget(null)}><View style={s.content}><Text style={s.muted}>This removes “{deleteTarget?.name}” from History and updates your profile totals.</Text><Button title="Keep workout" disabled={busy} onPress={() => setDeleteTarget(null)} /><Button title={busy ? 'Deleting…' : 'Delete workout'} secondary disabled={busy} onPress={deleteSession} /></View></Sheet>
   </SafeAreaView>;

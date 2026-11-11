@@ -1,9 +1,31 @@
 import { exerciseCatalog } from './exerciseCatalog.js';
 export const exercises = exerciseCatalog.map(exercise => exercise.name);
 let counter = 0;
+function nextId() { return `${Date.now()}-${counter++}`; }
 export function newExercise(name) {
-  const id = `${Date.now()}-${counter++}`;
+  const id = nextId();
   return { id, name, sets: [1, 2, 3].map(n => ({ id: `${id}-${n}`, reps: '10', weight: '', done: false })) };
+}
+export function repeatWorkout(session, now = new Date()) {
+  const source = Array.isArray(session?.exercises) ? session.exercises : [];
+  const exercises = source.flatMap(exercise => {
+    const name = typeof exercise?.name === 'string' ? exercise.name.trim() : '';
+    const sets = Array.isArray(exercise?.sets) ? exercise.sets : [];
+    if (!name || !sets.length) return [];
+    const id = nextId();
+    return [{
+      id,
+      name,
+      sets: sets.map((set, index) => ({
+        id: `${id}-${index + 1}`,
+        reps: String(set.reps ?? '10'),
+        weight: Number(set.weight) > 0 ? String(set.weight) : '',
+        done: false,
+      })),
+    }];
+  });
+  if (!exercises.length) throw new Error('This workout has no exercises to repeat.');
+  return { id: nextId(), startedAt: now.toISOString(), name: typeof session.name === 'string' ? session.name.trim() : '', exercises };
 }
 export function summarize(sessions) {
   return sessions.reduce((total, session) => {
