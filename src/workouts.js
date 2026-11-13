@@ -34,6 +34,37 @@ export function summarize(sessions) {
     return total;
   }, { sets: 0, reps: 0, minutes: 0 });
 }
+function startOfWeek(date) {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  return start;
+}
+function weekTotals(sessions, start) {
+  const end = new Date(start);
+  end.setDate(end.getDate() + 7);
+  const workouts = sessions.filter(session => {
+    const finished = new Date(session.finishedAt);
+    return !Number.isNaN(finished.getTime()) && finished >= start && finished < end;
+  });
+  const totals = summarize(workouts);
+  return { workouts: workouts.length, sets: totals.sets, reps: totals.reps };
+}
+export function weeklySummary(sessions, now = new Date()) {
+  const saved = Array.isArray(sessions) ? sessions : [];
+  const thisWeek = startOfWeek(now);
+  const previousWeek = new Date(thisWeek);
+  previousWeek.setDate(previousWeek.getDate() - 7);
+  const current = weekTotals(saved, thisWeek);
+  const previous = weekTotals(saved, previousWeek);
+  let streak = 0;
+  const cursor = new Date(thisWeek);
+  while (weekTotals(saved, cursor).workouts) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 7);
+  }
+  return { ...current, previousWorkouts: previous.workouts, streak };
+}
 export function finishSession(draft, now = new Date()) {
   const completed = draft.exercises.map(e => ({ ...e, sets: e.sets.filter(s => s.done).map(s => ({ ...s })) })).filter(e => e.sets.length);
   if (!completed.length) throw new Error('Check off at least one completed set before saving.');

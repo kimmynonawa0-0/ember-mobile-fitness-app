@@ -6,7 +6,7 @@ import { NavigationContainer, DarkTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { newExercise, summarize, finishSession, repeatWorkout } from './src/workouts';
+import { newExercise, summarize, finishSession, repeatWorkout, weeklySummary } from './src/workouts';
 
 import ExercisePicker from './src/ExercisePicker';
 import { routines } from './src/routines';
@@ -203,6 +203,7 @@ function History({ navigation }) {
 function Profile() {
   const { data } = useContext(Context);
   const totals = summarize(data.sessions);
+  const week = weeklySummary(data.sessions);
   return <SafeAreaView edges={['top']} style={s.screen}>
     <ScrollView contentContainerStyle={s.content}>
       <Header title="Profile" />
@@ -216,6 +217,14 @@ function Profile() {
       <Text style={s.sectionLabel}>Overview</Text>
       <Stats items={[[data.sessions.length, 'Workouts'], [totals.sets, 'Sets'], [totals.reps, 'Reps']]} />
       {!data.sessions.length && <Empty icon="bar-chart-outline" title="No data yet" />}
+      {!!data.sessions.length && <>
+        <Text style={s.sectionLabel}>This week</Text>
+        <View style={s.card}>
+          <Stats items={[[week.workouts, 'Workouts'], [week.sets, 'Sets'], [week.reps, 'Reps']]} />
+          <View style={s.row}><Icon name="flame-outline" color={colors.blue} /><Text style={s.body}>{week.streak ? `${week.streak}-week streak` : 'No active streak'}</Text></View>
+          <Text style={s.muted}>{week.previousWorkouts === 1 ? '1 workout last week' : `${week.previousWorkouts} workouts last week`}</Text>
+        </View>
+      </>}
       <Text style={s.footnote}>Totals include completed sets from saved workouts.</Text>
       <Text style={s.footnote}>Workouts are saved on this device.</Text>
     </ScrollView>
