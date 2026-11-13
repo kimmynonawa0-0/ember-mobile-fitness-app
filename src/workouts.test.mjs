@@ -1,11 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { newExercise, finishSession, summarize, repeatWorkout } from './workouts.js';
+import { newExercise, finishSession, summarize, repeatWorkout, weeklySummary } from './workouts.js';
 
 function draft() {
   return { id: 'session', name: '  Morning session  ', startedAt: '2026-09-19T08:00:00Z', exercises: [newExercise('Push-ups'), newExercise('Squats')] };
 }
 const end = new Date('2026-09-19T08:12:00Z');
+function savedSession(finishedAt, reps = 10) {
+  return { finishedAt: finishedAt.toISOString(), durationMinutes: 10, exercises: [{ id: 'exercise', name: 'Squat', sets: [{ id: 'set', reps }] }] };
+}
 test('requires a completed set', () => {
   assert.throws(() => finishSession(draft(), end), /at least one/);
 });
@@ -71,4 +74,44 @@ test('rejects workouts without repeatable exercises', () => {
   assert.throws(() => repeatWorkout(null), /no exercises/);
   assert.throws(() => repeatWorkout({ name: 'Empty', exercises: [] }), /no exercises/);
   assert.throws(() => repeatWorkout({ exercises: [{ name: 'Push-ups', sets: [] }] }), /no exercises/);
+});
+test('summarizes the current week, previous week, and weekly streak', () => {
+  const sessions = [
+    savedSession(new Date(2026, 8, 14, 8), 10),
+    savedSession(new Date(2026, 8, 16, 18), 12),
+    savedSession(new Date(2026, 8, 13, 23, 59), 8),
+    savedSession(new Date(2026, 8, 9, 8), 6),
+    savedSession(new Date(2026, 8, 5, 8), 4),
+  ];
+  assert.deepEqual(weeklySummary(sessions, new Date(2026, 8, 16, 12)), {
+    workouts: 2,
+    sets: 2,
+    reps: 22,
+    previousWorkouts: 2,
+    streak: 3,
+  });
+});
+test('starts weeks on Monday and resets the streak without a current-week workout', () => {
+  const now = new Date(2026, 8, 14, 0, 1);
+  assert.deepEqual(weeklySummary([savedSession(new Date(2026, 8, 13, 23, 59))], now), {
+    workouts: 0,
+    sets: 0,
+    reps: 0,
+    previousWorkouts: 1,
+    streak: 0,
+  });
+  assert.deepEqual(weeklySummary([savedSession(new Date(2026, 8, 14, 0, 0))], now), {
+    workouts: 1,
+    sets: 1,
+    reps: 10,
+    previousWorkouts: 0,
+    streak: 1,
+  });
+  assert.deepEqual(weeklySummary(undefined, now), {
+    workouts: 0,
+    sets: 0,
+    reps: 0,
+    previousWorkouts: 0,
+    streak: 0,
+  });
 });
