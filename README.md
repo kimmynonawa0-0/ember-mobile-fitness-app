@@ -13,6 +13,7 @@ A workout tracking app for logging exercises, sets, reps, and weights. Built wit
 - Review session details, rename workouts, and search by workout or exercise name.
 - Repeat a saved workout as a fresh draft with the same exercises and sets.
 - View total workouts, completed sets, and reps in Profile.
+- See this week's activity, last week's workout count, and a weekly streak.
 
 The interface uses a dark theme with EMBER branding and three bottom tabs: Workout, History, and Profile.
 
@@ -57,6 +58,12 @@ Routine templates are editable starting points. They do not define a weekly trai
 Open a session from History and select **Repeat workout** to start a new draft with the same exercises and number of sets. Reps and weights are prefilled for editing, while completion checkmarks are cleared so the new session starts fresh.
 
 If another workout is already in progress, EMBER asks before replacing it. The repeated workout is saved only after you check off sets and select **Finish & save workout**.
+
+## Weekly activity
+
+The Profile screen shows the current week's workouts, completed sets, and reps alongside your all-time totals. Weeks start on Monday in the device's local time.
+
+The weekly streak counts consecutive weeks with at least one saved workout. A week without a saved workout resets the streak, and the card also shows how many workouts were saved last week.
 
 ## Local storage
 
