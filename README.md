@@ -88,7 +88,8 @@ The stored document retains a legacy name field for compatibility. Profile displ
 
 ## Current limitations
 
-- Saved exercise sets cannot be edited. Workout names can be changed, and sessions can be deleted from History.
+- Editing a saved workout keeps its original date and recorded duration. The date and duration of a past session cannot be changed.
+- Saved workouts cannot be reordered, and exercises within a workout cannot be rearranged.
 - Exercises use reps and optional kilograms. Timed holds and distance-based activities are not supported.
 - Session duration in History measures elapsed time from starting to saving, including breaks. It is rounded to minutes with a minimum of one minute; there is no live workout timer.
 - Muscle illustrations identify representative targets, not exercise technique or every muscle involved.
@@ -130,7 +131,7 @@ npx expo export --platform web
 
 The web export is written to `dist/`. Generated bundles are build artifacts; make changes in the source files rather than editing bundled JavaScript.
 
-Before a release, verify saving and reloading sessions, navigating between tabs, exercise filtering, exit confirmation, keyboard behavior, and layout on a physical device.
+Before a release, verify saving and reloading sessions, editing saved workouts, navigating between tabs, exercise filtering, exit confirmation, keyboard behavior, and layout on a physical device.
 
 ## Assets and credits
 
