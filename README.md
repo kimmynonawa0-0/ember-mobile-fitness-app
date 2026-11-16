@@ -12,6 +12,7 @@ A workout tracking app for logging exercises, sets, reps, and weights. Built wit
 - Mark completed sets and save a session to History.
 - Review session details, rename workouts, and search by workout or exercise name.
 - Repeat a saved workout as a fresh draft with the same exercises and sets.
+- Edit a saved workout's exercises, sets, reps, and weights without changing its original date or duration.
 - View total workouts, completed sets, and reps in Profile.
 - See this week's activity, last week's workout count, and a weekly streak.
 
@@ -59,6 +60,14 @@ Open a session from History and select **Repeat workout** to start a new draft w
 
 If another workout is already in progress, EMBER asks before replacing it. The repeated workout is saved only after you check off sets and select **Finish & save workout**.
 
+## Editing a saved workout
+
+Open a session from History and select **Edit workout** to load its completed sets into the workout editor. Change reps or weights, add or remove exercises and sets, or update the workout name, then select **Save changes**.
+
+Edits update the existing session instead of creating a copy. Only checked sets are saved, and the original workout date and recorded duration are kept, so Profile totals and weekly activity stay consistent.
+
+If another workout is already in progress, EMBER asks before replacing it. Leaving the editor with unsaved changes also asks for confirmation.
+
 ## Weekly activity
 
 The Profile screen shows the current week's workouts, completed sets, and reps alongside your all-time totals. Weeks start on Monday in the device's local time.
@@ -70,6 +79,7 @@ The weekly streak counts consecutive weeks with at least one saved workout. A we
 Completed sessions are stored as JSON using AsyncStorage under the key `daily-rep-v1`. Data loads when the app opens; a session appears in History after its storage write succeeds.
 
 - Saved sessions remain available after restarting the app.
+- Editing a saved workout updates the existing entry in the same local document.
 - An active workout draft is saved on this device. When the app opens again, choose to resume or discard the draft.
 - Data is local to the device or browser and does not sync across devices.
 - Clearing the app's storage or browser site data removes saved sessions.
