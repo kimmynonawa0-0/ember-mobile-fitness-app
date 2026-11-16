@@ -65,15 +65,23 @@ export function weeklySummary(sessions, now = new Date()) {
   }
   return { ...current, previousWorkouts: previous.workouts, streak };
 }
-export function finishSession(draft, now = new Date()) {
-  const completed = draft.exercises.map(e => ({ ...e, sets: e.sets.filter(s => s.done).map(s => ({ ...s })) })).filter(e => e.sets.length);
-  if (!completed.length) throw new Error('Check off at least one completed set before saving.');
-  for (const exercise of completed) {
+function completedExercises(draft) {
+  return draft.exercises
+    .map(exercise => ({ ...exercise, sets: exercise.sets.filter(set => set.done).map(set => ({ ...set })) }))
+    .filter(exercise => exercise.sets.length);
+}
+function validateCompletedSets(exercises) {
+  for (const exercise of exercises) {
     for (const set of exercise.sets) {
       if (!/^\d+$/.test(set.reps) || Number(set.reps) < 1 || Number(set.reps) > 9999) throw new Error(`${exercise.name}: enter whole-number reps between 1 and 9999.`);
       if (set.weight !== '' && (!/^\d+(\.\d+)?$/.test(set.weight) || Number(set.weight) > 9999)) throw new Error(`${exercise.name}: enter a weight from 0 to 9999 kg, or leave it blank.`);
       set.reps = Number(set.reps); set.weight = Number(set.weight);
     }
   }
+}
+export function finishSession(draft, now = new Date()) {
+  const completed = completedExercises(draft);
+  if (!completed.length) throw new Error('Check off at least one completed set before saving.');
+  validateCompletedSets(completed);
   return { ...draft, name: draft.name.trim() || 'Daily workout', exercises: completed, finishedAt: now.toISOString(), durationMinutes: Math.max(1, Math.round((now - new Date(draft.startedAt)) / 60000)) };
 }
