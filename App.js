@@ -35,8 +35,8 @@ function Sheet({ visible, title, onClose, children, showClose = true }) {
 function Workout({ navigation, route }) {
   const { data, savedDraft, setSavedDraft, commit, busy, setNotice } = useContext(Context);
   const [draft, setDraft] = useState(null);
-  // Only checked sets require confirmation before leaving the workout.
-  const hasCompletedSets = draft?.exercises.some(exercise => exercise.sets.some(set => set.done)) ?? false;
+  // Checked sets are unsaved work; edits also confirm because they modify a saved session.
+  const needsLeaveConfirmation = !!draft?.editing || (draft?.exercises.some(exercise => exercise.sets.some(set => set.done)) ?? false);
   const [picker, setPicker] = useState(false);
   const [discard, setDiscard] = useState(false);
   const [pendingDraft, setPendingDraft] = useState(null);
@@ -132,14 +132,15 @@ function Workout({ navigation, route }) {
         <EmberWordmark />
         <Pressable accessibilityRole="button" accessibilityLabel="Go back" accessibilityState={{ disabled: busy }} disabled={busy} onPress={() => {
           Keyboard.dismiss();
-          if (hasCompletedSets) setDiscard(true);
+          if (needsLeaveConfirmation) setDiscard(true);
           else closeWorkout();
         }} style={({ pressed }) => [s.backButton, (pressed || busy) && { opacity: 0.5 }]}>
           <Icon name="chevron-back" color={colors.blue} size={18} />
           <Text style={s.backLabel}>Go back</Text>
         </Pressable>
       </View>
-      <Text style={s.title}>Current workout</Text>
+      <Text style={s.title}>{draft.editing ? 'Editing workout' : 'Current workout'}</Text>
+      {draft.editing && <Text style={s.muted}>Changes update this saved session and keep its original date and duration.</Text>}
     </View>}
     <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}><ScrollView key={draft ? draft.id : 'workout-start'} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
     {!draft && <Header title="Workout" />}
@@ -169,7 +170,7 @@ function Workout({ navigation, route }) {
       </View>)}
       <Button title="Add exercise" secondary icon="add" onPress={() => setPicker(true)} />
       {!!error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}
-      <Button title={busy ? 'Saving…' : 'Finish & save workout'} disabled={busy} icon="checkmark-circle-outline" onPress={save} />
+      <Button title={busy ? 'Saving…' : draft.editing ? 'Save changes' : 'Finish & save workout'} disabled={busy} icon="checkmark-circle-outline" onPress={save} />
     </>}
   </ScrollView></KeyboardAvoidingView>
     <Sheet visible={picker} title="Add Exercise" onClose={() => setPicker(false)}>
@@ -178,7 +179,7 @@ function Workout({ navigation, route }) {
         setPicker(false);
       }} />}
     </Sheet>
-    <Sheet visible={discard} showClose={false} title="Discard this workout?" onClose={() => setDiscard(false)}><View style={s.content}><Text style={s.muted}>Your checked sets have not been saved. Discard this session?</Text><Button title="Keep working out" onPress={() => setDiscard(false)} /><Button title="Discard session" secondary onPress={closeWorkout} /></View></Sheet>
+    <Sheet visible={discard} showClose={false} title={draft?.editing ? 'Discard these changes?' : 'Discard this workout?'} onClose={() => setDiscard(false)}><View style={s.content}><Text style={s.muted}>{draft?.editing ? 'Your changes have not been saved. Stop editing this workout?' : 'Your checked sets have not been saved. Discard this session?'}</Text><Button title={draft?.editing ? 'Keep editing' : 'Keep working out'} onPress={() => setDiscard(false)} /><Button title={draft?.editing ? 'Discard changes' : 'Discard session'} secondary onPress={closeWorkout} /></View></Sheet>
     <Sheet visible={!!pendingDraft} showClose={false} title="Replace current workout?" onClose={() => setPendingDraft(null)}><View style={s.content}><Text style={s.muted}>{pendingDraft?.action === 'edit' ? `Editing “${pendingDraft?.name}” will replace the workout in progress. Its checked sets have not been saved.` : `Repeating “${pendingDraft?.name}” will replace the workout in progress. Its checked sets have not been saved.`}</Text><Button title={pendingDraft?.action === 'edit' ? 'Edit saved workout' : 'Start repeated workout'} onPress={applyPendingDraft} /><Button title="Keep current workout" secondary onPress={() => setPendingDraft(null)} /></View></Sheet>
   </SafeAreaView>;
 }
