@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { beginEdit, newExercise, finishSession, summarize, repeatWorkout, weeklySummary } from './workouts.js';
+import { beginEdit, newExercise, finishSession, summarize, repeatWorkout, updateSession, weeklySummary } from './workouts.js';
 
 function draft() {
   return { id: 'session', name: '  Morning session  ', startedAt: '2026-09-19T08:00:00Z', exercises: [newExercise('Push-ups'), newExercise('Squats')] };
@@ -116,6 +116,38 @@ test('rejects saved workouts without exercises to edit', () => {
   assert.throws(() => beginEdit(null), /no exercises to edit/);
   assert.throws(() => beginEdit({ exercises: [] }), /no exercises to edit/);
   assert.throws(() => beginEdit({ exercises: [{ name: 'Squats', sets: [] }] }), /no exercises to edit/);
+});
+test('updates a saved workout in place while keeping its date and duration', () => {
+  const session = savedWorkout();
+  const snapshot = JSON.stringify(session);
+  const draft = beginEdit(session);
+  draft.name = '  Evening session  ';
+  draft.exercises[0].sets[0].reps = '15';
+  draft.exercises[0].sets[0].weight = '22.5';
+  draft.exercises[0].sets[1].done = false;
+  const updated = updateSession(draft, new Date('2026-09-21T09:00:00Z'));
+  assert.equal(updated.id, session.id);
+  assert.equal(updated.name, 'Evening session');
+  assert.equal(updated.startedAt, session.startedAt);
+  assert.equal(updated.finishedAt, session.finishedAt);
+  assert.equal(updated.durationMinutes, 12);
+  assert.equal(updated.editing, undefined);
+  assert.equal(updated.exercises[0].id, 'exercise-saved');
+  assert.deepEqual(
+    updated.exercises[0].sets.map(({ id, reps, weight, done }) => ({ id, reps, weight, done })),
+    [{ id: 'set-one', reps: 15, weight: 22.5, done: true }],
+  );
+  assert.equal(JSON.stringify(session), snapshot);
+});
+test('restores a missing saved duration and rejects invalid edits', () => {
+  const session = savedWorkout();
+  delete session.durationMinutes;
+  const draft = beginEdit(session);
+  assert.equal(updateSession(draft).durationMinutes, 12);
+  draft.exercises[0].sets[0].reps = '0';
+  assert.throws(() => updateSession(draft), /whole-number reps/);
+  draft.exercises[0].sets.forEach(set => { set.done = false; });
+  assert.throws(() => updateSession(draft), /at least one/);
 });
 test('summarizes the current week, previous week, and weekly streak', () => {
   const sessions = [
