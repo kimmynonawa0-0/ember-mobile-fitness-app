@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { newExercise, finishSession, summarize, repeatWorkout, weeklySummary } from './workouts.js';
+import { beginEdit, newExercise, finishSession, summarize, repeatWorkout, weeklySummary } from './workouts.js';
 
 function draft() {
   return { id: 'session', name: '  Morning session  ', startedAt: '2026-09-19T08:00:00Z', exercises: [newExercise('Push-ups'), newExercise('Squats')] };
@@ -74,6 +74,48 @@ test('rejects workouts without repeatable exercises', () => {
   assert.throws(() => repeatWorkout(null), /no exercises/);
   assert.throws(() => repeatWorkout({ name: 'Empty', exercises: [] }), /no exercises/);
   assert.throws(() => repeatWorkout({ exercises: [{ name: 'Push-ups', sets: [] }] }), /no exercises/);
+});
+function savedWorkout() {
+  return {
+    id: 'session-saved',
+    name: '  Morning session  ',
+    startedAt: '2026-09-19T08:00:00.000Z',
+    finishedAt: '2026-09-19T08:12:00.000Z',
+    durationMinutes: 12,
+    exercises: [{
+      id: 'exercise-saved',
+      name: 'Squats',
+      sets: [
+        { id: 'set-one', reps: 12, weight: 20, done: true },
+        { id: 'set-two', reps: 8, weight: 0, done: true },
+      ],
+    }],
+  };
+}
+test('builds an editable draft from a saved workout without mutating it', () => {
+  const session = savedWorkout();
+  const snapshot = JSON.stringify(session);
+  const draft = beginEdit(session);
+  assert.equal(draft.editing, true);
+  assert.equal(draft.id, session.id);
+  assert.equal(draft.name, 'Morning session');
+  assert.equal(draft.startedAt, session.startedAt);
+  assert.equal(draft.finishedAt, session.finishedAt);
+  assert.equal(draft.durationMinutes, 12);
+  assert.equal(draft.exercises[0].id, 'exercise-saved');
+  assert.deepEqual(
+    draft.exercises[0].sets.map(({ id, reps, weight, done }) => ({ id, reps, weight, done })),
+    [
+      { id: 'set-one', reps: '12', weight: '20', done: true },
+      { id: 'set-two', reps: '8', weight: '', done: true },
+    ],
+  );
+  assert.equal(JSON.stringify(session), snapshot);
+});
+test('rejects saved workouts without exercises to edit', () => {
+  assert.throws(() => beginEdit(null), /no exercises to edit/);
+  assert.throws(() => beginEdit({ exercises: [] }), /no exercises to edit/);
+  assert.throws(() => beginEdit({ exercises: [{ name: 'Squats', sets: [] }] }), /no exercises to edit/);
 });
 test('summarizes the current week, previous week, and weekly streak', () => {
   const sessions = [
