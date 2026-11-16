@@ -116,3 +116,23 @@ export function finishSession(draft, now = new Date()) {
   validateCompletedSets(completed);
   return { ...draft, name: draft.name.trim() || 'Daily workout', exercises: completed, finishedAt: now.toISOString(), durationMinutes: Math.max(1, Math.round((now - new Date(draft.startedAt)) / 60000)) };
 }
+export function updateSession(draft, now = new Date()) {
+  const completed = completedExercises(draft);
+  if (!completed.length) throw new Error('Check off at least one completed set before saving.');
+  validateCompletedSets(completed);
+  const finishedAt = typeof draft.finishedAt === 'string' ? draft.finishedAt : now.toISOString();
+  const recordedDuration = Number(draft.durationMinutes);
+  const started = new Date(draft.startedAt);
+  const finished = new Date(finishedAt);
+  const elapsedMinutes = !Number.isNaN(started.getTime()) && !Number.isNaN(finished.getTime())
+    ? Math.max(1, Math.round((finished - started) / 60000))
+    : 1;
+  return {
+    id: draft.id,
+    name: draft.name.trim() || 'Daily workout',
+    startedAt: draft.startedAt,
+    finishedAt,
+    durationMinutes: Number.isFinite(recordedDuration) && recordedDuration > 0 ? recordedDuration : elapsedMinutes,
+    exercises: completed,
+  };
+}
