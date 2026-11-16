@@ -6,7 +6,7 @@ import { NavigationContainer, DarkTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { newExercise, summarize, finishSession, repeatWorkout, weeklySummary } from './src/workouts';
+import { beginEdit, newExercise, summarize, finishSession, repeatWorkout, updateSession, weeklySummary } from './src/workouts';
 
 import ExercisePicker from './src/ExercisePicker';
 import { routines } from './src/routines';
@@ -57,6 +57,22 @@ function Workout({ navigation, route }) {
       setNotice(`Repeating “${session.name}”.`);
     } catch (e) { setNotice(e.message); }
   }, [repeatRequest, data.sessions, navigation, setNotice, setSavedDraft, draft]);
+  const editRequest = route.params?.edit;
+  const handledEdit = useRef(null);
+  useEffect(() => {
+    if (!editRequest?.sessionId || handledEdit.current === editRequest.at) return;
+    handledEdit.current = editRequest.at;
+    navigation.setParams({ edit: undefined });
+    const session = data.sessions.find(item => item.id === editRequest.sessionId);
+    if (!session) { setNotice('That workout is no longer available.'); return; }
+    try {
+      const editing = beginEdit(session);
+      if (draft) { setPendingDraft({ action: 'edit', name: session.name, draft: editing }); return; }
+      setSavedDraft(null);
+      setDraft(editing);
+      setNotice(`Editing “${session.name}”.`);
+    } catch (e) { setNotice(e.message); }
+  }, [editRequest, data.sessions, navigation, setNotice, setSavedDraft, draft]);
   useEffect(() => {
     if (!draft && savedDraft) return;
     const timer = setTimeout(async () => {
@@ -92,10 +108,13 @@ function Workout({ navigation, route }) {
   }
   async function save() {
     try {
-      const session = finishSession(draft);
-      if (await commit({ ...data, sessions: [session, ...data.sessions] })) {
+      const editing = !!draft.editing;
+      if (editing && !data.sessions.some(item => item.id === draft.id)) throw new Error('That workout is no longer available.');
+      const session = editing ? updateSession(draft) : finishSession(draft);
+      const sessions = editing ? data.sessions.map(item => item.id === session.id ? session : item) : [session, ...data.sessions];
+      if (await commit({ ...data, sessions })) {
         closeWorkout();
-        setNotice('Workout saved.');
+        setNotice(editing ? 'Workout updated.' : 'Workout saved.');
         navigation.navigate('History');
       }
     } catch (e) { setError(e.message); }
@@ -195,7 +214,7 @@ function History({ navigation }) {
     ListHeaderComponent={<View style={s.stack}><Header title="History" /><Stats items={[[data.sessions.length, 'Sessions'], [totals.sets, 'Sets'], [totals.reps, 'Reps']]} /><Input accessibilityLabel="Search workout history" placeholder="Search workouts or exercises…" value={query} onChangeText={setQuery} /></View>}
     ListEmptyComponent={<><Empty icon="time-outline" title={query ? 'No matching sessions' : 'No workouts yet'} text={query ? 'Try a different workout or exercise name.' : 'Your saved sessions will appear here.'} />{!query && <Button title="Start a workout" onPress={() => navigation.navigate('Workout')} />}</>}
     renderItem={({ item }) => { const total = summarize([item]); return <Pressable accessibilityRole="button" accessibilityLabel={`View ${item.name}`} style={s.card} onPress={() => setSelected(item)}><Text style={s.eyebrow}>{new Date(item.finishedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</Text><View style={s.row}><Text style={[s.heading, s.flex]}>{item.name}</Text><Icon name="chevron-forward" color={colors.blue} /></View><Text style={s.muted}>{item.exercises.length} exercises · {total.sets} sets · {total.reps} reps</Text><Text style={s.muted}>{item.durationMinutes} min · {item.exercises.map(e => e.name).join(', ')}</Text></Pressable>; }} />
-    <Sheet visible={!!selected && !deleteTarget && !renameTarget} title="Session details" onClose={() => setSelected(null)}>{selected && <ScrollView contentContainerStyle={s.content}><Header eyebrow={new Date(selected.finishedAt).toLocaleString()} title={selected.name} subtitle={`${selected.durationMinutes} minute session`} />{selected.exercises.map(e => <View key={e.id} style={s.card}><Text style={s.heading}>{e.name}</Text>{e.sets.map((set, i) => <Text key={set.id} style={s.body}>Set {i + 1}    {set.reps} reps    ·    {set.weight ? `${set.weight} kg` : 'Bodyweight'}</Text>)}</View>)}<Button title="Repeat workout" icon="repeat" disabled={busy} onPress={() => { setSelected(null); navigation.navigate('Workout', { repeat: { sessionId: selected.id, at: Date.now() } }); }} /><Button title="Edit workout name" secondary disabled={busy} onPress={() => { setSessionName(selected.name); setRenameTarget(selected); }} /><Button title="Delete workout" secondary disabled={busy} onPress={() => setDeleteTarget(selected)} /></ScrollView>}</Sheet>
+    <Sheet visible={!!selected && !deleteTarget && !renameTarget} title="Session details" onClose={() => setSelected(null)}>{selected && <ScrollView contentContainerStyle={s.content}><Header eyebrow={new Date(selected.finishedAt).toLocaleString()} title={selected.name} subtitle={`${selected.durationMinutes} minute session`} />{selected.exercises.map(e => <View key={e.id} style={s.card}><Text style={s.heading}>{e.name}</Text>{e.sets.map((set, i) => <Text key={set.id} style={s.body}>Set {i + 1}    {set.reps} reps    ·    {set.weight ? `${set.weight} kg` : 'Bodyweight'}</Text>)}</View>)}<Button title="Repeat workout" icon="repeat" disabled={busy} onPress={() => { setSelected(null); navigation.navigate('Workout', { repeat: { sessionId: selected.id, at: Date.now() } }); }} /><Button title="Edit workout" icon="create-outline" secondary disabled={busy} onPress={() => { setSelected(null); navigation.navigate('Workout', { edit: { sessionId: selected.id, at: Date.now() } }); }} /><Button title="Edit workout name" secondary disabled={busy} onPress={() => { setSessionName(selected.name); setRenameTarget(selected); }} /><Button title="Delete workout" secondary disabled={busy} onPress={() => setDeleteTarget(selected)} /></ScrollView>}</Sheet>
     <Sheet visible={!!renameTarget} title="Edit workout name" onClose={() => setRenameTarget(null)}><View style={s.content}><Input accessibilityLabel="Workout name" placeholder="Workout name" value={sessionName} maxLength={60} onChangeText={setSessionName} /><Button title="Save name" disabled={busy || !sessionName.trim()} onPress={saveSessionName} /><Button title="Cancel" secondary disabled={busy} onPress={() => setRenameTarget(null)} /></View></Sheet>
     <Sheet visible={!!deleteTarget} showClose={false} title="Delete this workout?" onClose={() => setDeleteTarget(null)}><View style={s.content}><Text style={s.muted}>This removes “{deleteTarget?.name}” from History and updates your profile totals.</Text><Button title="Keep workout" disabled={busy} onPress={() => setDeleteTarget(null)} /><Button title={busy ? 'Deleting…' : 'Delete workout'} secondary disabled={busy} onPress={deleteSession} /></View></Sheet>
   </SafeAreaView>;
