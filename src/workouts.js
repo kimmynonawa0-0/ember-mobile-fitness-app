@@ -27,6 +27,37 @@ export function repeatWorkout(session, now = new Date()) {
   if (!exercises.length) throw new Error('This workout has no exercises to repeat.');
   return { id: nextId(), startedAt: now.toISOString(), name: typeof session.name === 'string' ? session.name.trim() : '', exercises };
 }
+export function beginEdit(session) {
+  const source = Array.isArray(session?.exercises) ? session.exercises : [];
+  const exercises = source.flatMap(exercise => {
+    const name = typeof exercise?.name === 'string' ? exercise.name.trim() : '';
+    const sets = Array.isArray(exercise?.sets) ? exercise.sets : [];
+    if (!name || !sets.length) return [];
+    const id = typeof exercise.id === 'string' ? exercise.id : nextId();
+    return [{
+      ...exercise,
+      id,
+      name,
+      sets: sets.map((set, index) => ({
+        ...set,
+        id: typeof set.id === 'string' ? set.id : `${id}-${index + 1}`,
+        reps: String(set.reps ?? '10'),
+        weight: Number(set.weight) > 0 ? String(set.weight) : '',
+        done: true,
+      })),
+    }];
+  });
+  if (!exercises.length) throw new Error('This workout has no exercises to edit.');
+  return {
+    id: typeof session.id === 'string' ? session.id : nextId(),
+    editing: true,
+    name: typeof session.name === 'string' ? session.name.trim() : '',
+    startedAt: typeof session.startedAt === 'string' ? session.startedAt : new Date().toISOString(),
+    finishedAt: session.finishedAt,
+    durationMinutes: session.durationMinutes,
+    exercises,
+  };
+}
 export function summarize(sessions) {
   return sessions.reduce((total, session) => {
     total.minutes += session.durationMinutes;
