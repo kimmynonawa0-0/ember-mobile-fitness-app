@@ -56,6 +56,7 @@ export function beginEdit(session) {
     id: typeof session.id === 'string' ? session.id : nextId(),
     editing: true,
     name: typeof session.name === 'string' ? session.name.trim() : '',
+    notes: normalizeNotes(session.notes),
     startedAt: typeof session.startedAt === 'string' ? session.startedAt : new Date().toISOString(),
     finishedAt: session.finishedAt,
     durationMinutes: session.durationMinutes,
@@ -134,6 +135,7 @@ export function updateSession(draft, now = new Date()) {
   return {
     id: draft.id,
     name: draft.name.trim() || 'Daily workout',
+    notes: normalizeNotes(draft.notes),
     startedAt: draft.startedAt,
     finishedAt,
     durationMinutes: Number.isFinite(recordedDuration) && recordedDuration > 0 ? recordedDuration : elapsedMinutes,
