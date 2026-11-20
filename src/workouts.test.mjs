@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { beginEdit, newExercise, finishSession, MAX_NOTES_LENGTH, summarize, repeatWorkout, updateSession, weeklySummary } from './workouts.js';
+import { beginEdit, newExercise, finishSession, MAX_NOTES_LENGTH, sessionSearchText, summarize, repeatWorkout, updateSession, weeklySummary } from './workouts.js';
 
 function draft() {
   return { id: 'session', name: '  Morning session  ', startedAt: '2026-09-19T08:00:00Z', exercises: [newExercise('Push-ups'), newExercise('Squats')] };
@@ -235,4 +235,15 @@ test('starts weeks on Monday and resets the streak without a current-week workou
     previousWorkouts: 0,
     streak: 0,
   });
+});
+
+test('builds searchable text from workout name, notes, and exercises', () => {
+  const session = savedWorkout();
+  session.name = 'Leg Day';
+  session.notes = 'Focus on depth';
+  assert.equal(sessionSearchText(session), 'leg day focus on depth squats');
+  assert.equal(sessionSearchText({ name: 'Push', notes: '  ', exercises: [] }), 'push');
+  assert.equal(sessionSearchText({ notes: 'Sprint intervals' }), 'sprint intervals');
+  assert.equal(sessionSearchText({ name: 'Conditioning', exercises: [{ name: 'Rowing' }, { name: 42 }] }), 'conditioning rowing');
+  assert.equal(sessionSearchText(null), '');
 });
