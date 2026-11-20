@@ -6,7 +6,7 @@ import { NavigationContainer, DarkTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { beginEdit, newExercise, summarize, finishSession, repeatWorkout, updateSession, weeklySummary } from './src/workouts';
+import { beginEdit, newExercise, summarize, finishSession, MAX_NOTES_LENGTH, repeatWorkout, updateSession, weeklySummary } from './src/workouts';
 
 import ExercisePicker from './src/ExercisePicker';
 import { routines } from './src/routines';
@@ -157,6 +157,7 @@ function Workout({ navigation, route }) {
       </View>
     </> : <>
       <Input accessibilityLabel="Workout name" placeholder="Workout name (optional)" value={draft.name} maxLength={60} onChangeText={name => { setDraft({ ...draft, name }); }} />
+      <Input accessibilityLabel="Workout notes" placeholder="Workout notes (optional)" value={draft.notes || ''} maxLength={MAX_NOTES_LENGTH} multiline onChangeText={notes => { setDraft({ ...draft, notes }); }} style={s.notesInput} />
       <Text style={s.muted}>Enter reps and optional weight, then check off each completed set. Only checked sets are saved.</Text>
       {draft.exercises.map(exercise => <View key={exercise.id} style={s.card}>
         <View style={s.row}><Text style={[s.heading, s.flex]}>{exercise.name}</Text><Pressable accessibilityRole="button" accessibilityLabel={`Remove ${exercise.name}`} style={s.iconButton} onPress={() => { setDraft({ ...draft, exercises: draft.exercises.filter(e => e.id !== exercise.id) }); }}><Icon name="trash-outline" color={colors.muted} /></Pressable></View>
@@ -347,6 +348,7 @@ const s = StyleSheet.create({
   buttonText: { color: '#fff', fontWeight: '500', fontSize: 16 },
   secondary: { backgroundColor: '#2b2b2d' },
   input: { backgroundColor: '#111111', borderWidth: 1, borderColor: '#38383a', borderRadius: 8, padding: 12, color: colors.text, minHeight: 48, fontSize: 16, minWidth: 0 },
+  notesInput: { minHeight: 92, textAlignVertical: 'top' },
   stat: { flex: 1, paddingVertical: 12, alignItems: 'center', gap: 6 },
   statValue: { color: colors.text, fontWeight: '400', fontSize: 26 },
   empty: { backgroundColor: colors.card, borderRadius: 12, minHeight: 180, padding: 30, gap: 18, alignItems: 'center', justifyContent: 'center' },
