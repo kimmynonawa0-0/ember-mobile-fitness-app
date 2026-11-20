@@ -2,6 +2,10 @@ import { exerciseCatalog } from './exerciseCatalog.js';
 export const exercises = exerciseCatalog.map(exercise => exercise.name);
 let counter = 0;
 function nextId() { return `${Date.now()}-${counter++}`; }
+export const MAX_NOTES_LENGTH = 500;
+function normalizeNotes(value) {
+  return typeof value === 'string' ? value.trim().slice(0, MAX_NOTES_LENGTH) : '';
+}
 export function newExercise(name) {
   const id = nextId();
   return { id, name, sets: [1, 2, 3].map(n => ({ id: `${id}-${n}`, reps: '10', weight: '', done: false })) };
@@ -114,7 +118,7 @@ export function finishSession(draft, now = new Date()) {
   const completed = completedExercises(draft);
   if (!completed.length) throw new Error('Check off at least one completed set before saving.');
   validateCompletedSets(completed);
-  return { ...draft, name: draft.name.trim() || 'Daily workout', exercises: completed, finishedAt: now.toISOString(), durationMinutes: Math.max(1, Math.round((now - new Date(draft.startedAt)) / 60000)) };
+  return { ...draft, name: draft.name.trim() || 'Daily workout', notes: normalizeNotes(draft.notes), exercises: completed, finishedAt: now.toISOString(), durationMinutes: Math.max(1, Math.round((now - new Date(draft.startedAt)) / 60000)) };
 }
 export function updateSession(draft, now = new Date()) {
   const completed = completedExercises(draft);
