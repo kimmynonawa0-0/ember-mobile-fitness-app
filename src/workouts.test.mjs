@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { beginEdit, newExercise, finishSession, summarize, repeatWorkout, updateSession, weeklySummary } from './workouts.js';
+import { beginEdit, newExercise, finishSession, MAX_NOTES_LENGTH, summarize, repeatWorkout, updateSession, weeklySummary } from './workouts.js';
 
 function draft() {
   return { id: 'session', name: '  Morning session  ', startedAt: '2026-09-19T08:00:00Z', exercises: [newExercise('Push-ups'), newExercise('Squats')] };
@@ -44,6 +44,33 @@ test('uses defaults for unnamed bodyweight workouts and distinct exercise IDs', 
   assert.equal(result.exercises[0].sets[0].weight, 0);
   assert.notEqual(workout.exercises[0].id, workout.exercises[1].id);
   assert.deepEqual(summarize([]), { sets: 0, reps: 0, minutes: 0 });
+});
+test('saves trimmed workout notes and defaults to an empty note', () => {
+  const workout = draft();
+  workout.exercises[0].sets[0].done = true;
+  workout.notes = '  Felt strong today.  ';
+  assert.equal(finishSession(workout, end).notes, 'Felt strong today.');
+
+  const blank = draft();
+  blank.exercises[0].sets[0].done = true;
+  blank.notes = '   ';
+  assert.equal(finishSession(blank, end).notes, '');
+
+  const missing = draft();
+  missing.exercises[0].sets[0].done = true;
+  delete missing.notes;
+  assert.equal(finishSession(missing, end).notes, '');
+});
+test('caps saved workout notes at the stored limit', () => {
+  const workout = draft();
+  workout.exercises[0].sets[0].done = true;
+  workout.notes = `  ${'a'.repeat(MAX_NOTES_LENGTH + 20)}  `;
+  assert.equal(finishSession(workout, end).notes, 'a'.repeat(MAX_NOTES_LENGTH));
+
+  const invalid = draft();
+  invalid.exercises[0].sets[0].done = true;
+  invalid.notes = 42;
+  assert.equal(finishSession(invalid, end).notes, '');
 });
 test('repeats a saved workout as a fresh draft without mutating it', () => {
   const workout = draft();
