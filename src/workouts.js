@@ -70,6 +70,14 @@ export function summarize(sessions) {
     return total;
   }, { sets: 0, reps: 0, minutes: 0 });
 }
+export function sessionSearchText(session) {
+  const name = typeof session?.name === 'string' ? session.name : '';
+  const notes = typeof session?.notes === 'string' ? session.notes : '';
+  const exerciseNames = Array.isArray(session?.exercises)
+    ? session.exercises.map(exercise => typeof exercise?.name === 'string' ? exercise.name : '')
+    : [];
+  return [name, notes, ...exerciseNames].map(value => value.trim()).filter(Boolean).join(' ').toLowerCase();
+}
 function startOfWeek(date) {
   const start = new Date(date);
   start.setHours(0, 0, 0, 0);

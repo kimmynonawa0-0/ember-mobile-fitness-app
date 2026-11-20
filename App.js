@@ -6,7 +6,7 @@ import { NavigationContainer, DarkTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { beginEdit, newExercise, summarize, finishSession, MAX_NOTES_LENGTH, repeatWorkout, updateSession, weeklySummary } from './src/workouts';
+import { beginEdit, newExercise, summarize, finishSession, MAX_NOTES_LENGTH, repeatWorkout, sessionSearchText, updateSession, weeklySummary } from './src/workouts';
 
 import ExercisePicker from './src/ExercisePicker';
 import { routines } from './src/routines';
@@ -212,7 +212,7 @@ function History({ navigation }) {
       setNotice('Workout deleted.');
     }
   }
-  return <SafeAreaView edges={['top']} style={s.screen}><FlatList contentContainerStyle={s.content} data={data.sessions.filter(x => `${x.name} ${x.exercises.map(e => e.name).join(' ')}`.toLowerCase().includes(query.toLowerCase()))} keyExtractor={x => x.id}
+  return <SafeAreaView edges={['top']} style={s.screen}><FlatList contentContainerStyle={s.content} data={data.sessions.filter(x => sessionSearchText(x).includes(query.trim().toLowerCase()))} keyExtractor={x => x.id}
     ListHeaderComponent={<View style={s.stack}><Header title="History" /><Stats items={[[data.sessions.length, 'Sessions'], [totals.sets, 'Sets'], [totals.reps, 'Reps']]} /><Input accessibilityLabel="Search workout history" placeholder="Search workouts or exercises…" value={query} onChangeText={setQuery} /></View>}
     ListEmptyComponent={<><Empty icon="time-outline" title={query ? 'No matching sessions' : 'No workouts yet'} text={query ? 'Try a different workout or exercise name.' : 'Your saved sessions will appear here.'} />{!query && <Button title="Start a workout" onPress={() => navigation.navigate('Workout')} />}</>}
     renderItem={({ item }) => { const total = summarize([item]); return <Pressable accessibilityRole="button" accessibilityLabel={`View ${item.name}`} style={s.card} onPress={() => setSelected(item)}><Text style={s.eyebrow}>{new Date(item.finishedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</Text><View style={s.row}><Text style={[s.heading, s.flex]}>{item.name}</Text><Icon name="chevron-forward" color={colors.blue} /></View><Text style={s.muted}>{item.exercises.length} exercises · {total.sets} sets · {total.reps} reps</Text><Text style={s.muted}>{item.durationMinutes} min · {item.exercises.map(e => e.name).join(', ')}</Text></Pressable>; }} />
