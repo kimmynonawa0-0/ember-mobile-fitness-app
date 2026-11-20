@@ -144,6 +144,14 @@ test('rejects saved workouts without exercises to edit', () => {
   assert.throws(() => beginEdit({ exercises: [] }), /no exercises to edit/);
   assert.throws(() => beginEdit({ exercises: [{ name: 'Squats', sets: [] }] }), /no exercises to edit/);
 });
+test('exposes saved workout notes when editing', () => {
+  const session = savedWorkout();
+  session.notes = '  Keep elbows tucked.  ';
+  assert.equal(beginEdit(session).notes, 'Keep elbows tucked.');
+  assert.equal(beginEdit(savedWorkout()).notes, '');
+  session.notes = 42;
+  assert.equal(beginEdit(session).notes, '');
+});
 test('updates a saved workout in place while keeping its date and duration', () => {
   const session = savedWorkout();
   const snapshot = JSON.stringify(session);
@@ -165,6 +173,18 @@ test('updates a saved workout in place while keeping its date and duration', () 
     [{ id: 'set-one', reps: 15, weight: 22.5, done: true }],
   );
   assert.equal(JSON.stringify(session), snapshot);
+});
+test('updates saved workout notes when saving edits', () => {
+  const session = savedWorkout();
+  session.notes = 'Old note';
+  const snapshot = JSON.stringify(session);
+  const draft = beginEdit(session);
+  draft.notes = '  New note  ';
+  const updated = updateSession(draft, new Date('2026-09-21T09:00:00Z'));
+  assert.equal(updated.notes, 'New note');
+  assert.equal(JSON.stringify(session), snapshot);
+  draft.notes = '   ';
+  assert.equal(updateSession(draft).notes, '');
 });
 test('restores a missing saved duration and rejects invalid edits', () => {
   const session = savedWorkout();
