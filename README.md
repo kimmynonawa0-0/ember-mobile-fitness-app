@@ -13,6 +13,7 @@ A workout tracking app for logging exercises, sets, reps, and weights. Built wit
 - Review session details, rename workouts, and search by workout or exercise name.
 - Repeat a saved workout as a fresh draft with the same exercises and sets.
 - Edit a saved workout's exercises, sets, reps, and weights without changing its original date or duration.
+- Add an optional note to a workout, then read or search it in History.
 - View total workouts, completed sets, and reps in Profile.
 - See this week's activity, last week's workout count, and a weekly streak.
 
@@ -44,7 +45,7 @@ For an Android emulator, run `npm run android`. The iOS simulator requires macOS
 ## Logging a workout
 
 1. Select **Start Empty Workout** or a routine template.
-2. Add exercises and enter reps and optional weight for each set.
+2. Add exercises, enter reps and optional weight for each set, and add an optional workout note.
 3. Check off the sets you complete.
 4. Select **Finish & save workout** to save the session and open History.
 
@@ -62,11 +63,17 @@ If another workout is already in progress, EMBER asks before replacing it. The r
 
 ## Editing a saved workout
 
-Open a session from History and select **Edit workout** to load its completed sets into the workout editor. Change reps or weights, add or remove exercises and sets, or update the workout name, then select **Save changes**.
+Open a session from History and select **Edit workout** to load its completed sets into the workout editor. Change reps or weights, add or remove exercises and sets, or update the workout name and note, then select **Save changes**.
 
 Edits update the existing session instead of creating a copy. Only checked sets are saved, and the original workout date and recorded duration are kept, so Profile totals and weekly activity stay consistent.
 
 If another workout is already in progress, EMBER asks before replacing it. Leaving the editor with unsaved changes also asks for confirmation.
+
+## Workout notes
+
+Add an optional note in the workout editor to record how a session felt, what to focus on next time, or any other context. Notes are saved with the session, appear in History details, and are included in history search.
+
+Notes are plain text up to 500 characters. Repeating a workout starts with a blank note so the new session does not inherit the previous session's comments.
 
 ## Weekly activity
 
@@ -80,6 +87,7 @@ Completed sessions are stored as JSON using AsyncStorage under the key `daily-re
 
 - Saved sessions remain available after restarting the app.
 - Editing a saved workout updates the existing entry in the same local document.
+- Workout notes are stored with their session in the same local document.
 - An active workout draft is saved on this device. When the app opens again, choose to resume or discard the draft.
 - Data is local to the device or browser and does not sync across devices.
 - Clearing the app's storage or browser site data removes saved sessions.
@@ -89,6 +97,7 @@ The stored document retains a legacy name field for compatibility. Profile displ
 ## Current limitations
 
 - Editing a saved workout keeps its original date and recorded duration. The date and duration of a past session cannot be changed.
+- Workout notes are plain text capped at 500 characters. They are stored on this device and are not synced or shared.
 - Saved workouts cannot be reordered, and exercises within a workout cannot be rearranged.
 - Exercises use reps and optional kilograms. Timed holds and distance-based activities are not supported.
 - Session duration in History measures elapsed time from starting to saving, including breaks. It is rounded to minutes with a minimum of one minute; there is no live workout timer.
@@ -131,7 +140,7 @@ npx expo export --platform web
 
 The web export is written to `dist/`. Generated bundles are build artifacts; make changes in the source files rather than editing bundled JavaScript.
 
-Before a release, verify saving and reloading sessions, editing saved workouts, navigating between tabs, exercise filtering, exit confirmation, keyboard behavior, and layout on a physical device.
+Before a release, verify saving and reloading sessions, editing saved workouts and notes, navigating between tabs, exercise filtering, exit confirmation, keyboard behavior, and layout on a physical device.
 
 ## Assets and credits
 
